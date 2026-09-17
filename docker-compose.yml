@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: quota
+      POSTGRES_PASSWORD: quota
+      POSTGRES_DB: quota
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quota -d quota"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      QUOTA_DATABASE_URL: postgresql://quota:quota@db:5432/quota
+      QUOTA_DEFAULT_CAPACITY: "100"
+      QUOTA_DEFAULT_REFILL_RATE: "10"
+      QUOTA_RESERVATION_TTL_SECONDS: "60"
+      QUOTA_REAPER_INTERVAL_SECONDS: "1"
+      QUOTA_DB_MAX_SIZE: "20"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
